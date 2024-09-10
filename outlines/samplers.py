@@ -30,8 +30,7 @@ class GreedySampler:
     Attributes
     ----------
     samples
-        The number of samples taken for each input sequence.
-
+        The number of samples taken for each input sequence. Note that this cannot be greater than 1.
     """
 
     def __init__(self):
@@ -92,7 +91,12 @@ class MultinomialSampler:
     ----------
     samples
         The number of samples taken for each input sequence.
-
+    top_k
+        The number of top tokens to consider.
+    top_p
+        The cumulative probability of top-k tokens to consider.
+    temperature
+        The temperature of the softmax function.
     """
 
     def __init__(
