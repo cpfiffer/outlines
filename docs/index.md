@@ -27,7 +27,9 @@ large language models. It ensures LLMs speak the language of your application by
 
 ## Installation
 
-We recommend using `uv` to install Outlines. You can find installation instructions [here](https://github.com/astral-sh/uv).
+We recommend using `uv` to install Outlines. You can find `uv` installation instructions [here](https://github.com/astral-sh/uv).
+
+To install Outlines with the `transformers` backend, run:
 
 ```bash
 uv pip install 'outlines[transformers]'
@@ -39,59 +41,82 @@ or the classic `pip`:
 pip install 'outlines[transformers]'
 ```
 
+For other backends, see the [installation guide](/installation).
+
 ## Quick start
 
-> [!NOTE]
-> - [ ] This section should include tabs for each of the different inference backends.
-> - [ ] Add comments to the code example to explain what it does.
+Outlines wraps around a variety of LLM inference backends, described in the [installation guide](/installation). The following example shows how to use Outlines with HuggingFace's [`transformers` library](https://huggingface.co/docs/transformers/en/index).
+
+```python
+from outlines import models
+from pydantic import BaseModel, Field
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import json
+
+# Define a Pydantic model describing the output format
+class Person(BaseModel):
+    # Set name and age fields to be string/int respectively
+    name: str
+    age: int
+
+    # This field uses a regex pattern to constrain the output
+    # to only valid email addresses
+    email: str = Field(
+        pattern=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+        description="The email address of the person"
+    )
+
+# Load a model from HuggingFace
+model_id = "HuggingFaceTB/SmolLM2-135M-Instruct"
+
+# Construct the transformers model and tokenizer
+transformer_model = AutoModelForCausalLM.from_pretrained(model_id)
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+# Construct the outlines model
+model = models.from_transformers(transformer_model, tokenizer)
+```
 
 ### JSON
 
 ```python
-import json
-from outlines import models
-from pydantic import BaseModel, Field
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
-class Person(BaseModel):
-    name: str
-    age: int
-    email: str = Field(pattern=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-
-
-model_id = "HuggingFaceTB/SmolLM2-135M-Instruct"
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-model = AutoModelForCausalLM.from_pretrained(model_id)
-
-model = models.from_transformers(
-    model,
-    tokenizer
-)
-
+# Define the input text
 person_text = """
 John Doe
 30
 john.doe@example.com
 """
 
+# Apply chat templating to the input text
 prompt = tokenizer.apply_chat_template(
     [
-        {"role": "system", "content": "Extract the person information from this text."},
+        {"role": "system", "content": """
+        You are a master of extracting information from text.
+        """},
         {"role": "user", "content": person_text}
     ],
-    tokenize=False,
-    add_generation_prompt=True
+    tokenize=False
 )
 
+# Generate the output
 result = model(
     prompt, 
     Person,
+
+    # Note: transformers has an extremely small default
+    # max_new_tokens, which is often not enough for the 
+    # full JSON output. You will experience errors if your 
+    # model is unable to generate the full JSON output due
+    # to the max_new_tokens limit.
     max_new_tokens=100
 )
+
 print(result)
 ```
 
 Result:
+
 ```json
 {
     "name": "John Doe",
