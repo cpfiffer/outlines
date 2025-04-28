@@ -105,6 +105,7 @@ nav:
       - Welcome to Outlines: welcome.md
       - Installation: installation.md
       - Quickstart: quickstart.md
+      - Core concepts: core_concepts.md
       - Licence: licence.md
   - Cookbook:
       - cookbook/index.md
